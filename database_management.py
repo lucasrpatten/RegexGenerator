@@ -2,9 +2,9 @@ import sqlite3
 
 
 class Database:
-    def __init__(self, database_path="./data.db"):
+    def __init__(self, database_path="./data.db", table="patterns"):
         self.db_path = database_path
-        self.table = "patterns"
+        self.table = table
         self.conn, self.cursor = self.connect()
         self.length = self.get_length()
 
@@ -22,12 +22,33 @@ class Database:
         self.conn.close()
         self.conn, self.cursor = None, None
 
-    def query(self, query):
-        conn, cursor = self.connect()
-        cursor.execute(query)
+    def query(self, query, params=""):
+        self.cursor.execute(query, params)
+        return self.cursor.fetchall()
 
     def get_length(self):
-        self.query(f"SELECT COUNT(*) FROM {self.table}")
-        result = self.cursor.fetchone()[0]
-        self.length = len(result)
-        return result
+        result = self.query(f"SELECT COUNT(*) FROM {self.table}")
+        length = result[0][0]
+        return length
+
+    def add_row(self, accepted_patterns, rejected_patterns, output_pattern):
+        accepted_str = str(accepted_patterns)
+        rejected_str = str(rejected_patterns)
+        # How to add a row in sql using the sqlite3 module?
+        self.query(f"INSERT INTO {self.table} (pattern, match, reject) VALUES (?,?,?)", (
+            output_pattern, accepted_str, rejected_str))
+        self.commit()
+
+    def delete_row(self, row_id):
+        self.query(f"DELETE FROM {self.table} WHERE id = {row_id}")
+        self.query(f"UPDATE {self.table} SET id = id - 1 WHERE id > {row_id}")
+
+    def get_table(self):
+        table = self.query(f"SELECT * FROM {self.table}")
+        return table
+
+
+d = Database()
+d.delete_row(3)
+print(d.get_table())
+d.close()
