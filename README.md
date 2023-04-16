@@ -8,15 +8,20 @@ A regular expression pattern generator powered by artificial intelligence
 
   - Create an AI that can generate a regex statement for a user
 
-- ### Training Data
+- ### Input Data
 
   - A list of texts that should match, a list of texts that should not match, and the expected output. The input length will vary
+
+- ### Text Preprocessing
+
+  - Convert each input character to its ascii integer representation. Additionally, for training, output will also be converted to its ascii integer representation.
+  - One-hot encode input ascii representations (as well as example output representations when training)
 
 - ### Recurrent Neural Network (RNN) with attention mechanism
 
   - Allows for variable sized input regex data
   - Uses attention to focus on relevant parts of the input data
-  - Includes length regularization to prevent overfitting
+  - Includes length regularization and masking to prevent overfitting
 
 - ### Variational Autoencoder (VAE)
 

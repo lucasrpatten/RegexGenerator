@@ -28,10 +28,6 @@ class Database:
 
     def get_length(self):
         self.query(f"SELECT COUNT(*) FROM {self.table}")
-        result = self.cursor.fetchone()[]
-        self.length = result
+        result = self.cursor.fetchone()[0]
+        self.length = len(result)
         return result
-
-
-d = Database()
-d.connect()
