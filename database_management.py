@@ -34,12 +34,14 @@ class Database:
     def add_row(self, accepted_patterns, rejected_patterns, output_pattern):
         accepted_str = str(accepted_patterns)
         rejected_str = str(rejected_patterns)
+        output_str = str(output_pattern)
         # How to add a row in sql using the sqlite3 module?
         self.query(f"INSERT INTO {self.table} (pattern, match, reject) VALUES (?,?,?)", (
-            output_pattern, accepted_str, rejected_str))
+            output_str, accepted_str, rejected_str))
         self.commit()
 
     def delete_row(self, row_id):
+        row_id = int(row_id)
         self.query(f"DELETE FROM {self.table} WHERE id = {row_id}")
         self.query(f"UPDATE {self.table} SET id = id - 1 WHERE id > {row_id}")
 
