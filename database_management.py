@@ -49,8 +49,3 @@ class Database:
         table = self.query(f"SELECT * FROM {self.table}")
         return table
 
-
-d = Database()
-d.delete_row(3)
-print(d.get_table())
-d.close()

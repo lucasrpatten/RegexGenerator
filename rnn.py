@@ -2,7 +2,6 @@
 # rnn = Model(inputs=[allowed_input, rejected_input], outputs=output)
 
 from keras.layers import Input, LSTM, Flatten, Bidirectional, Masking, Attention, Dense
-from keras.models import Model
 
 
 def create_rnn(max_input_length, output_size):
