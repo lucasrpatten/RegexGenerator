@@ -1,98 +1,113 @@
-from keras.layers import Dense, LSTM, Flatten, Bidirectional, TimeDistributed, Reshape, Concatenate, Masking, RepeatVector
 from keras.models import Model
-from keras.layers import Layer
+from keras.layers import Input, Dense, Reshape, Lambda, Layer, BatchNormalization, Bidirectional, LSTM, Masking, Flatten, Concatenate, Embedding
+from keras.losses import binary_crossentropy
 import keras.backend as K
+import numpy as np
 import tensorflow as tf
 
 
-class Sampling(Layer):
+class Sampling(Model):
+    """Uses (z_mean, z_log_var) to sample z, the vector encoding a digit."""
+
     def __init__(self, trainable=True, name="sampling", dtype=None, dynamic=False, **kwargs):
-        super().__init__(trainable, name, dtype, dynamic, **kwargs)
+        super().__init__(trainable=trainable, name=name, dtype=dtype, dynamic=dynamic, **kwargs)
 
     def call(self, inputs):
-        z_mean, z_log_var = inputs
-        batch = K.shape(z_mean)[0]
-        dim = K.int_shape(z_mean)[1]
+        mu, sigma = inputs
+        batch = K.shape(mu)[0]
+        dim = K.shape(mu)[1]
         epsilon = K.random_normal(shape=(batch, dim))
-        z = z_mean + K.exp(0.5 * z_log_var) * epsilon
-        return z
+        return mu + K.exp(sigma / 2) * epsilon
 
 
-class Encoder(Layer):
-    def __init__(self, input_dim, latent_dim, trainable=True, name="encoder", dtype=None, dynamic=False, **kwargs):
-        super().__init__(trainable, name, dtype, dynamic, **kwargs)
-        self.input_dim = input_dim
+class Encoder(Model):
+    def __init__(self, latent_dim=2, trainable=True, name="encoder", dtype=None, dynamic=False, **kwargs):
+        super().__init__(trainable=trainable, name="encoder", dtype=dtype, dynamic=dynamic, **kwargs)
         self.latent_dim = latent_dim
-        self.bidirectional_lstm_1 = Bidirectional(
-            LSTM(256, return_sequences=True))
-        self.bidirectional_lstm_2 = Bidirectional(
-            LSTM(128, return_sequences=True))
-        self.bidirectional_lstm_3 = Bidirectional(
-            LSTM(64, return_sequences=False))
-        self.mean = Dense(self.latent_dim, name="mean", activation='linear')
-        self.log_var = Dense(latent_dim, name="log_var", activation='linear')
-        self.sampling = Sampling()
+        self.masking = Masking(mask_value=0., name="masking")
+        self.hidden1 = Bidirectional(LSTM(64, return_sequences=True, name="bidirectional_lstm_1"))
+        self.hidden2 = Bidirectional(LSTM(128, return_sequences=True, name="bidirectional_lstm_2"))
+        self.hidden3 = Bidirectional(LSTM(256, return_sequences=False, name="bidirectional_lstm_3"))
+        self.normalization = BatchNormalization()
+        self.flatten = Flatten()
+        self.dense = Dense(512, activation="relu")
+        self.mu = Dense(self.latent_dim, name="latent_mu")
+        self.sigma = Dense(self.latent_dim, name="latent_sigma")
 
     def call(self, inputs):
-        concatenated = Concatenate(axis=1)([inputs[0], inputs[1]])
-        hidden1 = self.bidirectional_lstm_1(concatenated)
-        hidden2 = self.bidirectional_lstm_2(hidden1)
-        hidden3 = self.bidirectional_lstm_3(hidden2)
-        mean, log_var = self.mean(hidden3), self.log_var(hidden3)
-        z = self.sampling([mean, log_var])
-        return z, mean, log_var
+        masked = self.masking(inputs)
+        hidden = self.hidden1(masked)
+        hidden = self.hidden2(hidden)
+        hidden = self.hidden3(hidden)
+        normalized = self.normalization(hidden)
+        flattened = self.flatten(normalized)
+        dense = self.dense(flattened)
+        dense_normalized = self.normalization(dense)
+        mu = self.mu(dense_normalized)
+        sigma = self.sigma(dense_normalized)
+            # rnn_shape = K.int_shape(normalized)
+        return mu, sigma
 
-
-class Decoder(Layer):
-    def __init__(self, input_dim, latent_dim, trainable=True, name="decoder", dtype=None, dynamic=False, **kwargs):
-        super().__init__(trainable, name, dtype, dynamic, **kwargs)
-        self.input_dim = input_dim
+class Decoder(Model):
+    def __init__(self, latent_dim=2, max_output_len=20, trainable=True, name="decoder", dtype=None, dynamic=False, **kwargs):
+        super().__init__(trainable=trainable, name=name, dtype=dtype, dynamic=dynamic, **kwargs)
+        tf.config.run_functions_eagerly(True)
         self.latent_dim = latent_dim
-        self.dense_1 = Dense(64, name="dense_1", activation='relu')
-        self.repeat_vector = RepeatVector(input_dim)
-        self.lstm_1 = LSTM(128, name="lstm_1", return_sequences=True)
-        self.lstm_2 = LSTM(256, name="lstm_2", return_sequences=True)
-        self.dense_2 = TimeDistributed(
-            Dense(input_dim, name="dense_2", activation="sigmoid"), name="time_distributed")
+        self.max_output_len = max_output_len
+        self.hidden1 = LSTM(256, return_sequences=True)
+        self.hidden2 = LSTM(128, return_sequences=True)
+        self.hidden3 = LSTM(64, return_sequences=True)
+        self.masking = Masking(mask_value=0.)
+        self.out = Dense(self.max_output_len, activation='linear')
+        self.embedding_layer = Embedding(input_dim=3, output_dim=2)
 
     def call(self, inputs):
-        hidden_1 = self.dense_1(inputs)
-        repeat = self.repeat_vector(hidden_1)
-        hidden_2 = self.lstm_1(repeat)
-        hidden_3 = self.lstm_2(hidden_2)
-        output = self.dense_2(hidden_3)
+        input1 = inputs[0].numpy()
+        input2 = inputs[1].numpy()
+        concatenated = np.concatenate([input1, input2], axis=-1)
+        arr3d = np.expand_dims(concatenated, axis=1)
+        arr_tensor = tf.constant(arr3d)
+        hidden = self.hidden1(arr_tensor)
+        hidden = self.hidden2(hidden)
+        hidden = self.hidden3(hidden)
+        masked = self.masking(hidden)
+        output = self.out(masked)
         return output
 
-
 class VAE(Model):
-    def __init__(self, input_dim, latent_dim):
-        super(VAE, self).__init__()
-        self.input_dim = input_dim
+    def __init__(
+        self,
+        input_dim,
+        latent_dim,
+        max_output_len=20,
+        beta=1.0,
+        name="variational_autoencoder",
+        **kwargs
+    ):
+        super().__init__(name=name, **kwargs)
         self.latent_dim = latent_dim
-        self.encoder = Encoder(input_dim, latent_dim)
-        self.decoder = Decoder(latent_dim, input_dim)
+        self.max_output_len = max_output_len
+        self.mu = None
+        self.sigma = None
+        self.z = None
+        self.encoder = Encoder(self.latent_dim)
+        self.decoder = Decoder(self.latent_dim, self.max_output_len)
+        self.sampling = Sampling()
 
-    def encode(self, inputs):
-        z, mean, log_var = self.encoder(inputs)
-        return z, mean, log_var
 
-    def decode(self, z):
-        return self.decoder(z)
+    def kl_reconstruction_loss(self, truth, pred):
+        reconstruction_loss = binary_crossentropy(
+            K.flatten(truth), K.flatten(pred))
 
-    def reparameterize(self, mean, log_var):
-        # To enable backpropagation
-        eps = K.random_normal(shape=mean.shape)
-        return mean + K.exp(0.5 * log_var) * eps
+        kl_loss = 1 + self.sigma - K.square(self.mu) - K.exp(self.sigma)
+        kl_loss = K.sum(kl_loss, axis=-1)
+        kl_loss *= -0.5
+
+        return K.mean(reconstruction_loss + kl_loss)
 
     def call(self, inputs):
-        _, mean, log_var = self.encode(inputs)
-        z = self.reparameterize(mean, log_var)
-        reconstructed = self.decode(z)
-        self.add_loss(self.calc_loss(inputs, reconstructed, mean, log_var))
-        return reconstructed, mean, log_var
-
-    def calc_loss(self, inputs, reconstructed, mean, log_var):
-        reconstruction_loss = tf.reduce_mean(K.square(inputs - reconstructed))
-        kl_divergence_loss = -0.5 * tf.reduce_mean(1 + log_var - K.square(mean) - K.exp(log_var))
-        total_loss = reconstruction_loss + kl_divergence_loss
-        return total_loss
+        concatenated = Concatenate(axis=1)(inputs)
+        self.mu, self.sigma = self.encoder(concatenated)
+        z = self.sampling([self.mu, self.sigma])
+        predicted_output = self.decoder([z, self.mu, self.sigma])
+        return predicted_output

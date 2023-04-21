@@ -7,3 +7,4 @@ from keras.utils import pad_sequences
 db = Database()
 dataset = db.get_table()
 dataset = [i[1:] for i in dataset]
+ast.
