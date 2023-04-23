@@ -1,8 +1,9 @@
 from keras.models import Model
-from keras.layers import Input, Dense, Reshape, Lambda, Layer, BatchNormalization, Bidirectional, LSTM, Masking, Flatten, Concatenate, Embedding
+from keras.layers import Dense, BatchNormalization, Bidirectional, LSTM, Masking, Flatten, Concatenate
 from keras.losses import binary_crossentropy
 import keras.backend as K
 import numpy as np
+import string
 import tensorflow as tf
 
 
@@ -10,7 +11,8 @@ class Sampling(Model):
     """Uses (z_mean, z_log_var) to sample z, the vector encoding a digit."""
 
     def __init__(self, trainable=True, name="sampling", dtype=None, dynamic=False, **kwargs):
-        super().__init__(trainable=trainable, name=name, dtype=dtype, dynamic=dynamic, **kwargs)
+        super().__init__(trainable=trainable, name=name,
+                         dtype=dtype, dynamic=dynamic, **kwargs)
 
     def call(self, inputs):
         mu, sigma = inputs
@@ -22,12 +24,16 @@ class Sampling(Model):
 
 class Encoder(Model):
     def __init__(self, latent_dim=2, trainable=True, name="encoder", dtype=None, dynamic=False, **kwargs):
-        super().__init__(trainable=trainable, name="encoder", dtype=dtype, dynamic=dynamic, **kwargs)
+        super().__init__(trainable=trainable, name=name,
+                         dtype=dtype, dynamic=dynamic, **kwargs)
         self.latent_dim = latent_dim
         self.masking = Masking(mask_value=0., name="masking")
-        self.hidden1 = Bidirectional(LSTM(64, return_sequences=True, name="bidirectional_lstm_1"))
-        self.hidden2 = Bidirectional(LSTM(128, return_sequences=True, name="bidirectional_lstm_2"))
-        self.hidden3 = Bidirectional(LSTM(256, return_sequences=False, name="bidirectional_lstm_3"))
+        self.hidden1 = Bidirectional(
+            LSTM(64, return_sequences=True, name="bidirectional_lstm_1"))
+        self.hidden2 = Bidirectional(
+            LSTM(128, return_sequences=True, name="bidirectional_lstm_2"))
+        self.hidden3 = Bidirectional(
+            LSTM(256, return_sequences=False, name="bidirectional_lstm_3"))
         self.normalization = BatchNormalization()
         self.flatten = Flatten()
         self.dense = Dense(512, activation="relu")
@@ -45,34 +51,36 @@ class Encoder(Model):
         dense_normalized = self.normalization(dense)
         mu = self.mu(dense_normalized)
         sigma = self.sigma(dense_normalized)
-            # rnn_shape = K.int_shape(normalized)
+        # rnn_shape = K.int_shape(normalized)
         return mu, sigma
 
 class Decoder(Model):
     def __init__(self, latent_dim=2, max_output_len=20, trainable=True, name="decoder", dtype=None, dynamic=False, **kwargs):
-        super().__init__(trainable=trainable, name=name, dtype=dtype, dynamic=dynamic, **kwargs)
+        super().__init__(trainable=trainable, name=name,
+                         dtype=dtype, dynamic=dynamic, **kwargs)
         tf.config.run_functions_eagerly(True)
         self.latent_dim = latent_dim
         self.max_output_len = max_output_len
-        self.hidden1 = LSTM(256, return_sequences=True)
-        self.hidden2 = LSTM(128, return_sequences=True)
-        self.hidden3 = LSTM(64, return_sequences=True)
+        self.hidden1 = LSTM(512, return_sequences=True)
+        self.hidden2 = LSTM(256, return_sequences=True)
+        self.hidden3 = LSTM(128, return_sequences=True)
+        self.hidden4 = LSTM(64, return_sequences=True)
         self.masking = Masking(mask_value=0.)
-        self.out = Dense(self.max_output_len, activation='linear')
-        self.embedding_layer = Embedding(input_dim=3, output_dim=2)
+        self.out = Dense(self.max_output_len, activation="tanh")
 
     def call(self, inputs):
-        input1 = inputs[0].numpy()
-        input2 = inputs[1].numpy()
-        concatenated = np.concatenate([input1, input2], axis=-1)
-        arr3d = np.expand_dims(concatenated, axis=1)
-        arr_tensor = tf.constant(arr3d)
-        hidden = self.hidden1(arr_tensor)
+        input1 = inputs[0]
+        input2 = inputs[1]
+        concatenated = K.concatenate([input1, input2], axis=1)
+        tensor3d = K.expand_dims(concatenated, axis=1)
+        hidden = self.hidden1(tensor3d)
         hidden = self.hidden2(hidden)
         hidden = self.hidden3(hidden)
+        hidden = self.hidden4(hidden)
         masked = self.masking(hidden)
         output = self.out(masked)
-        return output
+        return tf.squeeze(output)
+
 
 class VAE(Model):
     def __init__(
@@ -94,11 +102,11 @@ class VAE(Model):
         self.decoder = Decoder(self.latent_dim, self.max_output_len)
         self.sampling = Sampling()
 
-
     def kl_reconstruction_loss(self, truth, pred):
-        reconstruction_loss = binary_crossentropy(
-            K.flatten(truth), K.flatten(pred))
-
+        pred = tf.cast(pred, tf.float32)
+        truth = K.flatten(truth)
+        pred = K.flatten(pred)
+        reconstruction_loss = binary_crossentropy(truth, pred)
         kl_loss = 1 + self.sigma - K.square(self.mu) - K.exp(self.sigma)
         kl_loss = K.sum(kl_loss, axis=-1)
         kl_loss *= -0.5

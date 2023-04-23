@@ -48,4 +48,3 @@ class Database:
     def get_table(self):
         table = self.query(f"SELECT * FROM {self.table}")
         return table
-
