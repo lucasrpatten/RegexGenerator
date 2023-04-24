@@ -58,6 +58,7 @@ A regular expression pattern generator powered by artificial intelligence
 ## To Do
 
 - ~~Create Model (completed)~~
-- Create Large Dataset
-- Convert to functional api, not subclassing
+- Implement KL Loss in loss function (priority)
+- Obtain Larger Dataset
+- ~~Convert to functional api, not model subclassing (completed)~~
 - Create Frontend

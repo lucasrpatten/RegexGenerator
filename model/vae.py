@@ -1,121 +1,111 @@
 from keras.models import Model
-from keras.layers import Dense, BatchNormalization, Bidirectional, LSTM, Masking, Flatten, Concatenate
+from keras.layers import Input, Layer, Dense, Reshape, Bidirectional, LSTM, Masking, Flatten, Concatenate
 from keras.losses import binary_crossentropy
 import keras.backend as K
-import numpy as np
-import string
 import tensorflow as tf
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+
+max_output_length = 20
+max_input_length = 5
+max_input_text_length = 100
 
 
-class Sampling(Model):
-    """Uses (z_mean, z_log_var) to sample z, the vector encoding a digit."""
-
-    def __init__(self, trainable=True, name="sampling", dtype=None, dynamic=False, **kwargs):
-        super().__init__(trainable=trainable, name=name,
-                         dtype=dtype, dynamic=dynamic, **kwargs)
-
-    def call(self, inputs):
-        mu, sigma = inputs
-        batch = K.shape(mu)[0]
-        dim = K.shape(mu)[1]
-        epsilon = K.random_normal(shape=(batch, dim))
-        return mu + K.exp(sigma / 2) * epsilon
-
-
-class Encoder(Model):
-    def __init__(self, latent_dim=2, trainable=True, name="encoder", dtype=None, dynamic=False, **kwargs):
-        super().__init__(trainable=trainable, name=name,
-                         dtype=dtype, dynamic=dynamic, **kwargs)
+class Encoder(Layer):
+    def __init__(self, latent_dim, trainable=True, name=None, dtype=None, dynamic=False, **kwargs):
+        super().__init__(trainable, name, dtype, dynamic, **kwargs)
         self.latent_dim = latent_dim
-        self.masking = Masking(mask_value=0., name="masking")
-        self.hidden1 = Bidirectional(
-            LSTM(64, return_sequences=True, name="bidirectional_lstm_1"))
-        self.hidden2 = Bidirectional(
-            LSTM(128, return_sequences=True, name="bidirectional_lstm_2"))
-        self.hidden3 = Bidirectional(
-            LSTM(256, return_sequences=False, name="bidirectional_lstm_3"))
-        self.normalization = BatchNormalization()
+        self.hidden1 = LSTM(64, return_sequences=True,
+                            go_backwards=True)
+        self.hidden2 = LSTM(128, return_sequences=True,
+                            go_backwards=True)
+        self.hidden3 = LSTM(256, return_sequences=False,
+                            go_backwards=True)
         self.flatten = Flatten()
-        self.dense = Dense(512, activation="relu")
-        self.mu = Dense(self.latent_dim, name="latent_mu")
-        self.sigma = Dense(self.latent_dim, name="latent_sigma")
+        self.out = Dense(self.latent_dim)
+
+    def compute_mask(self, inputs, mask=None):
+        new_mask = K.not_equal(inputs, 0.0)
+        if mask is not None:
+            new_mask = mask * new_mask
+        return mask
+
+    def get_config(self):
+        config = super().get_config()
+        config.update({
+            'latent_dim': self.latent_dim
+        })
+        return config
+
+    def call(self, inputs, mask=None):
+        if mask is not None:
+            inputs *= K.cast_to_floatx(mask)
+        hidden = self.hidden1(inputs, mask=mask)
+        hidden = self.hidden2(hidden, mask=mask)
+        hidden = self.hidden3(hidden, mask=mask)
+        hidden = self.flatten(hidden)
+        z_mean = self.out(hidden)
+        z_log_var = self.out(hidden)
+        return z_mean, z_log_var
+
+
+kl_loss = 0
+
+
+class Sampling(Layer):
+    def __init__(self, trainable=True, name=None, dtype=None, dynamic=False, **kwargs):
+        super().__init__(trainable, name, dtype, dynamic, **kwargs)
 
     def call(self, inputs):
-        masked = self.masking(inputs)
-        hidden = self.hidden1(masked)
-        hidden = self.hidden2(hidden)
-        hidden = self.hidden3(hidden)
-        normalized = self.normalization(hidden)
-        flattened = self.flatten(normalized)
-        dense = self.dense(flattened)
-        dense_normalized = self.normalization(dense)
-        mu = self.mu(dense_normalized)
-        sigma = self.sigma(dense_normalized)
-        # rnn_shape = K.int_shape(normalized)
-        return mu, sigma
-
-class Decoder(Model):
-    def __init__(self, latent_dim=2, max_output_len=20, trainable=True, name="decoder", dtype=None, dynamic=False, **kwargs):
-        super().__init__(trainable=trainable, name=name,
-                         dtype=dtype, dynamic=dynamic, **kwargs)
-        tf.config.run_functions_eagerly(True)
-        self.latent_dim = latent_dim
-        self.max_output_len = max_output_len
-        self.hidden1 = LSTM(512, return_sequences=True)
-        self.hidden2 = LSTM(256, return_sequences=True)
-        self.hidden3 = LSTM(128, return_sequences=True)
-        self.hidden4 = LSTM(64, return_sequences=True)
-        self.masking = Masking(mask_value=0.)
-        self.out = Dense(self.max_output_len, activation="tanh")
-
-    def call(self, inputs):
-        input1 = inputs[0]
-        input2 = inputs[1]
-        concatenated = K.concatenate([input1, input2], axis=1)
-        tensor3d = K.expand_dims(concatenated, axis=1)
-        hidden = self.hidden1(tensor3d)
-        hidden = self.hidden2(hidden)
-        hidden = self.hidden3(hidden)
-        hidden = self.hidden4(hidden)
-        masked = self.masking(hidden)
-        output = self.out(masked)
-        return tf.squeeze(output)
+        z_mean, z_log_var = inputs
+        batch = K.shape(z_mean)[0]
+        dim = K.int_shape(z_mean)[1]
+        epsilon = K.random_normal(shape=(batch, dim))
+        return z_mean + K.exp(0.5 * z_log_var) * epsilon
 
 
-class VAE(Model):
-    def __init__(
-        self,
-        input_dim,
-        latent_dim,
-        max_output_len=20,
-        beta=1.0,
-        name="variational_autoencoder",
-        **kwargs
-    ):
-        super().__init__(name=name, **kwargs)
-        self.latent_dim = latent_dim
-        self.max_output_len = max_output_len
-        self.mu = None
-        self.sigma = None
-        self.z = None
-        self.encoder = Encoder(self.latent_dim)
-        self.decoder = Decoder(self.latent_dim, self.max_output_len)
-        self.sampling = Sampling()
+latent_dim = 20
+match_encoder = Encoder(latent_dim=20)
+rejection_encoder = Encoder(latent_dim=20)
 
-    def kl_reconstruction_loss(self, truth, pred):
-        pred = tf.cast(pred, tf.float32)
-        truth = K.flatten(truth)
-        pred = K.flatten(pred)
-        reconstruction_loss = binary_crossentropy(truth, pred)
-        kl_loss = 1 + self.sigma - K.square(self.mu) - K.exp(self.sigma)
-        kl_loss = K.sum(kl_loss, axis=-1)
-        kl_loss *= -0.5
 
-        return K.mean(reconstruction_loss + kl_loss)
+encoder_matches_input = Input(
+    shape=(max_input_length, max_input_text_length))
+encoder_rejections_input = Input(
+    shape=(max_input_length, max_input_text_length))
+match_z_mean, match_z_log_var = match_encoder(encoder_matches_input)
+rejection_z_mean, rejection_z_log_var = rejection_encoder(
+    encoder_rejections_input)
+z_mean = Concatenate(axis=1)([match_z_mean, rejection_z_mean])
+z_log_var = Concatenate(axis=1)([match_z_log_var, rejection_z_log_var])
 
-    def call(self, inputs):
-        concatenated = Concatenate(axis=-1)(inputs)
-        self.mu, self.sigma = self.encoder(concatenated)
-        z = self.sampling([self.mu, self.sigma])
-        predicted_output = self.decoder([z, self.mu, self.sigma])
-        return predicted_output
+sampling = Sampling()([z_mean, z_log_var])
+encoder_output = Concatenate(axis=1)([z_mean, z_log_var])
+encoder = Model([encoder_matches_input, encoder_rejections_input],
+                encoder_output, name="encoder")
+encoder.summary()
+
+decoder_input = Input(shape=(latent_dim*4), name="decoder_input")
+hidden = Dense(512, activation="relu")(decoder_input)
+hidden = Dense(256, activation="sigmoid")(hidden)
+hidden = Dense(128, activation="relu")(hidden)
+hidden = Dense(64, activation="relu")(hidden)
+decoder_output = Dense(max_output_length, activation="linear")(hidden)
+decoder = Model(decoder_input, decoder_output, name="decoder")
+decoder.summary()
+
+matches_input = Input(
+    shape=(max_input_length, max_input_text_length), name="matches")
+rejections_input = Input(
+    shape=(max_input_length, max_input_text_length), name="rejections")
+
+encoded_input = encoder([matches_input, rejections_input])
+decoded_regex = decoder(encoded_input)
+autoencoder = Model(
+    [matches_input, rejections_input], decoded_regex, name="vae")
+autoencoder.summary()
+autoencoder.compile(optimizer="adam", loss=lambda true, pred: kl_reconstruction_loss(true, pred))
+
+def kl_reconstruction_loss(truth, pred):
+    reconstruction_loss = binary_crossentropy(truth, pred)
+    return K.mean(reconstruction_loss + kl_loss)

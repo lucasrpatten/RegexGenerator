@@ -1,9 +1,9 @@
-from model.vae import VAE
 from database_management import Database
 import ast
 import numpy as np
 from keras.utils import pad_sequences
-import typing
+from keras.models import Model
+from model.vae import autoencoder, kl_reconstruction_loss
 import json
 
 
@@ -61,14 +61,13 @@ class Preprocessing(DBLoader):
 def train():
     p = Preprocessing()
     encoded_matches, encoded_rejections, encoded_outputs = p.preprocess_database()
-    print(encoded_matches.shape)
-    input_dim: int = 2
+    # print(encoded_matches.shape)
+    # input_dim: int = 2
     latent_dim: int = 5
     epochs, batch_size = 10, 3
-    model = VAE(input_dim=input_dim, latent_dim=latent_dim)
-    model.compile(optimizer="adam", loss=model.kl_reconstruction_loss)
-    history = model.fit([encoded_matches, encoded_rejections],
-                        encoded_outputs, batch_size, epochs)
-    model.save_weights("model.h5")
+    history = autoencoder.fit([encoded_matches, encoded_rejections], encoded_outputs, batch_size, epochs)
+    autoencoder.save_weights("model.h5")
     with open("build_config.json", "w") as f:
-        json.dump(model.get_build_config(), f)
+        json.dump(autoencoder.get_config(), f)
+
+train()
