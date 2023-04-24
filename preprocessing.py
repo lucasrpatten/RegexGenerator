@@ -1,16 +1,17 @@
-from vae2 import VAE
+from model.vae import VAE
 from database_management import Database
 import ast
 import numpy as np
 from keras.utils import pad_sequences
 import typing
+import json
 
 
 class DBLoader(Database):
     def __init__(self, max_output_length=20, database_path="./data.db", table="patterns"):
         super().__init__(database_path=database_path, table=table)
         self.max_output_length = max_output_length
-        self.dataset, self.ouputs, self.matches, self.rejections = [None] * 4
+        self.dataset, self.ouputs, self.matches, self.rejections = [[None]] * 4
 
     def load_data(self):
         self.dataset = self.get_table()
@@ -40,10 +41,10 @@ class Preprocessing(DBLoader):
         return padded
 
     def encode_texts(self, texts: list[str], maxtextlen: int, maxarrlen: int) -> np.ndarray:
-        texts = np.pad(texts, (0, maxarrlen - len(texts)),
+        padded = np.pad(texts, (0, maxarrlen - len(texts)),
                        'constant', constant_values="")
         encoded_texts = np.array([self.encode_text(
-            text, maxlen=maxtextlen) for text in texts])
+            text, maxlen=maxtextlen) for text in padded])
         return encoded_texts
 
     def preprocess_database(self) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
@@ -57,21 +58,17 @@ class Preprocessing(DBLoader):
         return encoded_matches, encoded_rejections, encoded_outputs
 
 
-p = Preprocessing()
-encoded_matches, encoded_rejections, encoded_outputs = p.preprocess_database()
-input_dim: int = encoded_matches.shape[1]
-latent_dim: int = 5
-epochs, batch_size = 10, 3
-model = VAE(input_dim=input_dim, latent_dim=latent_dim)
-model.compile(optimizer="adam", loss=model.kl_reconstruction_loss)
-history = model.fit([encoded_matches, encoded_rejections],
-                    encoded_outputs, batch_size, epochs)
-model.save_weights("model.h5")
-# a = ['abAB12', 'cdCD34', 'efEF56', 'ghGH78']
-# b = ['abc', 'def', 'ghi', 'jkl']
-# r = r'[a-zA-Z]+\\d{2}'
-# a = p.encode_texts(a, 100, 20)
-# b = p.encode_texts(b, 100, 20)
-# pred = model.predict([a, b])
-# print(pred)
-# print([chr(int(i*128)) for i in pred])
+def train():
+    p = Preprocessing()
+    encoded_matches, encoded_rejections, encoded_outputs = p.preprocess_database()
+    print(encoded_matches.shape)
+    input_dim: int = 2
+    latent_dim: int = 5
+    epochs, batch_size = 10, 3
+    model = VAE(input_dim=input_dim, latent_dim=latent_dim)
+    model.compile(optimizer="adam", loss=model.kl_reconstruction_loss)
+    history = model.fit([encoded_matches, encoded_rejections],
+                        encoded_outputs, batch_size, epochs)
+    model.save_weights("model.h5")
+    with open("build_config.json", "w") as f:
+        json.dump(model.get_build_config(), f)
