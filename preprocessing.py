@@ -3,8 +3,9 @@ import ast
 import numpy as np
 from keras.utils import pad_sequences
 from keras.models import Model
-from model.vae import autoencoder, kl_reconstruction_loss
+from model.vae import autoencoder
 import json
+import os
 
 
 class DBLoader(Database):
@@ -59,15 +60,29 @@ class Preprocessing(DBLoader):
 
 
 def train():
+    os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
     p = Preprocessing()
     encoded_matches, encoded_rejections, encoded_outputs = p.preprocess_database()
     # print(encoded_matches.shape)
     # input_dim: int = 2
     latent_dim: int = 5
-    epochs, batch_size = 10, 3
-    history = autoencoder.fit([encoded_matches, encoded_rejections], encoded_outputs, batch_size, epochs)
+    epochs, batch_size = 40, 2
+    history = autoencoder.fit([encoded_matches, encoded_rejections], encoded_outputs, batch_size, epochs, workers=4, use_multiprocessing=True)
     autoencoder.save_weights("model.h5")
     with open("build_config.json", "w") as f:
         json.dump(autoencoder.get_config(), f)
 
 train()
+r = r"[a-zA-Z]+\d{2}"
+matches = list(('abAB12', 'cdCD34', 'efEF56', 'ghGH78'))
+rejections = list(('abc', 'def', 'ghi', 'jkl'))
+p = Preprocessing()
+matches = p.encode_texts(matches, 100, 5)
+rejections = p.encode_texts(rejections, 100, 5)
+
+matches = matches.reshape((1, 5, 100))
+rejections = rejections.reshape((1, 5, 100))
+
+response = autoencoder([matches, rejections])
+print(response)
+print([chr(int(abs(i)*128)) for i in response[0]])
