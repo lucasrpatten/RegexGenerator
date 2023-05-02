@@ -1,9 +1,7 @@
 from database_management import Database
 import ast
 import numpy as np
-from keras.utils import pad_sequences
-from keras.models import Model
-from model.vae import autoencoder
+from model.generator import RegexGenerator
 import json
 import os
 
@@ -43,7 +41,7 @@ class Preprocessing(DBLoader):
 
     def encode_texts(self, texts: list[str], maxtextlen: int, maxarrlen: int) -> np.ndarray:
         padded = np.pad(texts, (0, maxarrlen - len(texts)),
-                       'constant', constant_values="")
+                        'constant', constant_values="")
         encoded_texts = np.array([self.encode_text(
             text, maxlen=maxtextlen) for text in padded])
         return encoded_texts
@@ -66,23 +64,28 @@ def train():
     # print(encoded_matches.shape)
     # input_dim: int = 2
     latent_dim: int = 5
-    epochs, batch_size = 40, 2
-    history = autoencoder.fit([encoded_matches, encoded_rejections], encoded_outputs, batch_size, epochs, workers=4, use_multiprocessing=True)
-    autoencoder.save_weights("model.h5")
+    epochs, batch_size = 40, 3
+    model = RegexGenerator()
+    model.compile(optimizer="adam", loss="mse")
+    history = model.fit([encoded_matches, encoded_rejections],
+                        encoded_outputs, batch_size, epochs)
+    model.save_weights("model.h5")
     with open("build_config.json", "w") as f:
-        json.dump(autoencoder.get_config(), f)
+        json.dump(model.get_config(), f)
+
+    r = r"[a-zA-Z]+\d{2}"
+    matches = list(('abAB12', 'cdCD34', 'efEF56', 'ghGH78'))
+    rejections = list(('abc', 'def', 'ghi', 'jkl'))
+    p = Preprocessing()
+    matches = p.encode_texts(matches, 100, 5)
+    rejections = p.encode_texts(rejections, 100, 5)
+
+    matches = matches.reshape((1, 5, 100))
+    rejections = rejections.reshape((1, 5, 100))
+
+    response = model([matches, rejections])
+    print(response)
+    print([chr(int(abs(i)*128)) for i in response[0]])
+
 
 train()
-r = r"[a-zA-Z]+\d{2}"
-matches = list(('abAB12', 'cdCD34', 'efEF56', 'ghGH78'))
-rejections = list(('abc', 'def', 'ghi', 'jkl'))
-p = Preprocessing()
-matches = p.encode_texts(matches, 100, 5)
-rejections = p.encode_texts(rejections, 100, 5)
-
-matches = matches.reshape((1, 5, 100))
-rejections = rejections.reshape((1, 5, 100))
-
-response = autoencoder([matches, rejections])
-print(response)
-print([chr(int(abs(i)*128)) for i in response[0]])
