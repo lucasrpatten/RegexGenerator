@@ -1,13 +1,14 @@
 # Regex Pattern Generator
 
-A regular expression pattern generator powered by artificial intelligence
+A regular expression pattern generator powered by artificial intelligence and neural networks
 
 ## Table of contents
 
 - [Regex Pattern Generator](#regex-pattern-generator)
   - [Table of contents](#table-of-contents)
   - [Model Overview](#model-overview)
-  - [To Do Until v1.0](#to-do-until-v10)
+  - [Dataset](#dataset)
+  - [To Do Until v1.0 Release](#to-do-until-v10-release)
 
 ## Model Overview
 
@@ -42,11 +43,14 @@ A regular expression pattern generator powered by artificial intelligence
   - Use a test and evaluation set to evaluate the performance of the model
   - Calculate metrics such as precision, recall, and F1-score to measure the model's accuracy in generating regex statements
 
-## To Do Until v1.0
+## Dataset
+
+The dataset is not currently large enough for the model to be accurate. We need a few thousand more data entries before the model will be functional. Feel free to add a few examples to the sqlite db and submit a pull request, or if you know a better way to get this data, let me know.
+
+## To Do Until v1.0 Release
 
 - ~~Create Model (completed)~~
-- Obtain Larger Dataset
-- Improve model accuracy
-- Ensure model outputs valid regex
+- Obtain Larger Dataset (Important)
 - ~~Convert to functional api, not model subclassing (completed)~~
-- Create Frontend
+- Create Frontend Website
+- Create Backend Server (Funding or Host Required)

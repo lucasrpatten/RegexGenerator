@@ -10,7 +10,7 @@ from preprocessing import Preprocessing
 def train():
     """ Function to train the model from the dataset
     """
-    process = Preprocessing()
+    process = Preprocessing(database_path="./model/data.db")
     encoded_matches, encoded_rejections, encoded_outputs = process.preprocess_database()
     epochs, batch_size = 100, 4
     model = RegexGenerator()
@@ -24,7 +24,6 @@ def train():
     _ = r"[a-zA-Z]+\d{2}"
     matches = list(('abAB12', 'cdCD34', 'efEF56', 'ghGH78'))
     rejections = list(('abc', 'def', 'ghi', 'jkl'))
-    process = Preprocessing()
     matches = process.encode_texts(matches, 100, 5)
     rejections = process.encode_texts(rejections, 100, 5)
 
@@ -34,3 +33,5 @@ def train():
     response = model([matches, rejections])
     print(response)
     print([chr(int(abs(i)*128)) for i in response[0]])
+
+train()
