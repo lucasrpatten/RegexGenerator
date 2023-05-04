@@ -2,62 +2,92 @@ let matches = [];
 let rejections = [];
 
 const inputElement = (userInput) => {
-    return `
-    <div class="input-element">
-      <span>${userInput}</span>
-      <button class="delete-button">Delete</button>
-    </div>
-  `;
-};
+    return (
+        `
+        <div class="input-element d-block w-50 border">
+            <div class="w-100 text-center text-wrap text-break">${userInput}</div>
+            <button class="delete-button w-100">Delete</button>
+        </div>
+        `
+    )
+}
 
-const addToList = (list, input, inputId) => {
-    if (input.trim().length === 0) {
+const addRejection = () => {
+    var userInput = $("#rejection-input").val();
+    if (!userInput.length > 0) {
         return;
     }
-    if (list.includes(input)) {
-        alert(`Matching Texts Cannot Contain Duplicates`);
+    else if (rejections.includes(userInput)) {
+        alert("Rejection Texts Cannot Contain Duplicates");
         return;
     }
-    list.push(input);
-    $(`#${inputId}`).append(inputElement(input));
-    $(`#${inputId} input`).val("");
-};
+
+    rejections.push(userInput);
+    $('#rejections').append(inputElement(userInput));
+    $(this).val('');
+}
+
+const deleteRejection = (element) => {
+    rejections = rejections.filter(function (item) {
+        return item != $(element).parent('.input-element').find("div").text().replace("Delete", "")
+    })
+    $(element).parent(".input-element").remove();
+}
 
 
-const deleteFromList = (list, element) => {
-    const text = $(element).siblings("span").text();
-    list = list.filter(item => item !== text);
-    $(element).parent().remove();
-};
 
-$(function () {
-    $("#match-input").on("keyup", event => {
-        if (event.key === "Enter") {
+const addMatch = () => {
+    var userInput = $("#matches-input").find("div").find("input").val();
+    console.log(userInput)
+    if (!userInput.length > 0) {
+        return;
+    }
+    else if (matches.includes(userInput)) {
+        alert("Matching Texts Cannot Contain Duplicates");
+        return;
+    }
+    matches.push(userInput);
+    $('#matches').append(inputElement(userInput));
+    $(this).val('');
+}
+
+const deleteMatch = (element) => {
+    matches = matches.filter(function (item) {
+        return item != $(element).parent('.input-element').find("div").text().replace("Delete", "")
+    });
+    $(element).parent('.input-element').remove();
+}
+
+$(document).ready(function () {
+    $("#matches-input").on("keyup", function (event) {
+        if (event.keyCode === 13) {
             event.preventDefault();
-            addToList(matches, $(event.target).val(), "matches");
+            addMatch();
         }
     });
 
-    $("#rejection-input").on("keyup", event => {
-        if (event.key === "Enter") {
+    $("#rejections-input").on("keyup", function (event) {
+        if (event.keyCode === 13) {
             event.preventDefault();
-            addToList(rejections, $(event.target).val(), "rejections");
+            addRejection();
         }
     });
 
-    $("#matches, #rejections").on("click", ".delete-button", event => {
-        const parent = $(event.target).closest(".input-element").parent();
-        if (parent.is("#matches")) {
-            deleteFromList(matches, event.target);
-        } else {
-            deleteFromList(rejections, event.target);
-        }
+    $("#matches").on('click', '.delete-button', function () {
+        deleteMatch(this);
     });
 
-    $("#add-match, #add-rejection").click(event => {
+    $("#rejections").on('click', '.delete-button', function () {
+        deleteRejection(this);
+    });
+
+    $("#add-match").click(function (event) {
         event.preventDefault();
-        const inputId = $(event.target).data("input-id");
-        const inputVal = $(`#${inputId} input`).val();
-        addToList(inputId === "matches" ? matches : rejections, inputVal, inputId);
+        addMatch();
     });
+
+    $("#add-rejection").click(function (event) {
+        event.preventDefault();
+        addRejection();
+    })
 });
