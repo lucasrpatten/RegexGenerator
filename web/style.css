@@ -1,0 +1,34 @@
+@media screen and (min-width: 769px) {
+    .inputs-box {
+        display: flex;
+        flex-direction: row;
+        justify-content: left;
+        align-items: center;
+        flex-wrap: wrap;
+        max-height: 80vh;
+        overflow-y: scroll;
+        scrollbar-width: none;
+    }
+
+    .inputs-box::-webkit-scrollbar {
+        display: none;
+    }
+
+    .input-element {
+        width: 67%;
+    }
+
+    .inputs-title {
+        max-height: 8vh;
+    }
+}
+
+@media screen and (max-width: 768px) {
+    .inputs-box {
+        display: inline-block;
+    }
+
+    .input-element {
+        width: auto;
+    }
+}
