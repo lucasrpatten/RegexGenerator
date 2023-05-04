@@ -1,3 +1,43 @@
+:root {
+    --light: #FAF9F9;
+    --light-accent: #7797EC;
+    --primary-color: #608DBA;
+    --dark-accent: #696B8C;
+    --dark: #201426;
+    --warning-color: #e50914;
+}
+
+body {
+    background-color: var(--light);
+}
+
+button {
+    border-radius: 10px;
+}
+
+.inputs-title {
+    color: var(--dark);
+}
+
+.input-element {
+    border: 2px solid var(--light-accent);
+    border-radius: 10px;
+    padding: 12px;
+    margin-top: 12px;
+
+}
+
+.delete-button {
+    background-color: var(--primary-color);
+    color: var(--dark);
+}
+
+#add-rejection, #add-match {
+    background-color: var(--primary-color);
+    color: var(--dark);
+    border-color: var(--dark-accent);
+}
+
 @media screen and (min-width: 769px) {
     .inputs-box {
         display: flex;
@@ -15,7 +55,7 @@
     }
 
     .input-element {
-        width: 67%;
+        width: 280px;
     }
 
     .inputs-title {
@@ -30,5 +70,21 @@
 
     .input-element {
         width: auto;
+    }
+
+    #rejections-input, #matches-input {
+        width: 90%;
+        margin-left: 5%;
+    }
+
+    #add-rejection, #add-match {
+        width: 100%;
+        padding: 5px;
+    }
+
+    #rejection-input, #match-input {
+        width: 100%;
+        margin-right: auto;
+        position: relative;
     }
 }

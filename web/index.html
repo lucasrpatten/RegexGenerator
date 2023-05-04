@@ -18,8 +18,8 @@
             <p class="inputs-title">Matches: </p>
             <div id="matches-input">
                 <label for="match-input">Enter a string that should match: </label>
-                <div class="d-block w-75">
-                    <input type="text" name="match-input" id="match-input">
+                <div class="d-block">
+                    <input type="text" name="match-input" id="match-input" maxlength="100">
                     <button id="add-match" type="submit">Add</button>
                 </div>
             </div>
@@ -32,7 +32,7 @@
                 <div id="rejections-input">
                     <label for="rejection-input">Enter a string that shouldn't match: </label>
                     <div class="d-block">
-                        <input type="text" name="rejection-input" id="rejection-input">
+                        <input type="text" name="rejection-input" id="rejection-input" maxlength="100">
                         <button id="add-rejection" type="submit">Add</button>
                     </div>
                 </div>

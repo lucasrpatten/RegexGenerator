@@ -4,7 +4,7 @@ let rejections = [];
 const inputElement = (userInput) => {
     return (
         `
-        <div class="input-element d-block border">
+        <div class="input-element d-block">
             <div class="w-100 text-center text-wrap text-break">${userInput}</div>
             <button class="delete-button w-100">Delete</button>
         </div>
