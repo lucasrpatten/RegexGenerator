@@ -2,7 +2,7 @@
     --light: #FAF9F9;
     --light-accent: #7797EC;
     --primary-color: #608DBA;
-    --dark-accent: #696B8C;
+    --dark-accent: #4c4e68;
     --dark: #201426;
     --warning-color: #e50914;
 }
@@ -17,6 +17,11 @@ button {
 
 .inputs-title {
     color: var(--dark);
+}
+
+input {
+    border-radius: 10px;
+    border: solid 2px var(--dark-accent);
 }
 
 .input-element {

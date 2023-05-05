@@ -1,3 +1,5 @@
+import('./api.js').then(a => api = a);
+
 let matches = [];
 let rejections = [];
 
@@ -34,8 +36,6 @@ const deleteRejection = (element) => {
     $(element).parent(".input-element").remove();
 }
 
-
-
 const addMatch = () => {
     var userInput = $("#matches-input").find("div").find("input").val();
     console.log(userInput)
@@ -56,6 +56,10 @@ const deleteMatch = (element) => {
         return item != $(element).parent('.input-element').find("div").text().replace("Delete", "")
     });
     $(element).parent('.input-element').remove();
+}
+
+const validation = () => {
+    lengths_requirement = matches.length > 0 && rejections.length > 0;
 }
 
 $(document).ready(function () {
@@ -89,5 +93,11 @@ $(document).ready(function () {
     $("#add-rejection").click(function (event) {
         event.preventDefault();
         addRejection();
+    })
+
+    $("#get-regex").click(function (event) {
+        event.preventDefault();
+        let response = api.getRegex(matches, rejections);
+        $("#response").text(response.pattern);
     })
 });
