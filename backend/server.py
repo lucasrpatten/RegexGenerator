@@ -8,17 +8,19 @@ class GetRegex(Resource):
     def post(self):
         data = request.get_json()
         print(data)
-        return jsonify(["hi"]), 200, {
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Expose-Headers': '*',
+        headers = request.headers
+        return "hi", 200, {
+            'Access-Control-Allow-Origin': f'{headers["Origin"]}',
             "Content-Type": "application/json"
         }
 
-    def get(self):
-        return{"a": "hi"}, 200, {
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Expose-Headers': '*',
-            "Content-Type": "application/json"
+    def options(self):
+        headers = request.headers
+        print(headers)
+        return None, 200, {
+            'Access-Control-Allow-Origin': f'{headers["Origin"]}',
+            'Access-Control-Allow-Methods': 'POST',
+            'Access-Control-Allow-Headers': f'{headers["Access-Control-Request-Headers"]}',
         }
 
 

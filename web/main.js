@@ -1,4 +1,4 @@
-import('./api.js').then(a => api = a);
+
 
 let matches = [];
 let rejections = [];
@@ -97,7 +97,37 @@ $(document).ready(function () {
 
     $("#get-regex").click(function (event) {
         event.preventDefault();
-        let response = api.getRegex(matches, rejections);
+        let response = getRegex(matches, rejections);
         $("#response").text(response.pattern);
     })
 });
+
+const apiUrl = "http://127.0.0.1:5000"
+
+
+const getRegex = async (matches, rejections) => {
+    if (!matches.length > 0) {
+        alert("Please Add Match Texts");
+        return;
+    }
+    if (!rejections.length > 0) {
+        alert("Please Add Rejection Texts");
+        return;
+    }
+    let request = await fetch(`${apiUrl}/get-regex`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+            matches: matches,
+            rejections: rejections,
+        })
+    })
+
+    const response = await request.json();
+
+    return response;
+}
+
+
