@@ -1,4 +1,4 @@
-const apiUrl = "http://127.0.0.1:3000"
+const apiUrl = "http://127.0.0.1:5000"
 
 export const getRegex = async (matches, rejections) => {
     if (!matches.length > 0) {
@@ -10,13 +10,13 @@ export const getRegex = async (matches, rejections) => {
         return;
     }
     let request = await fetch(`${apiUrl}/get-regex`, {
-        method: "GET",
+        method: "POST",
         headers: {
-            "Content-Type": "application/json"
+            "Content-Type": "text/html",
         },
         body: JSON.stringify({
             matches: matches,
-            rejections: rejections
+            rejections: rejections,
         })
     })
 
