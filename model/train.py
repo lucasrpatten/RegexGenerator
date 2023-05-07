@@ -12,7 +12,7 @@ def train():
     """
     process = Preprocessing(database_path="./model/data.db")
     encoded_matches, encoded_rejections, encoded_outputs = process.preprocess_database()
-    epochs, batch_size = 100, 4
+    epochs, batch_size = 20, 8
     model = RegexGenerator()
     model.compile(optimizer="adam", loss="mse")
     model.fit([encoded_matches, encoded_rejections],

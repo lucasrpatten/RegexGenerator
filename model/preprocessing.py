@@ -54,9 +54,9 @@ class Preprocessing(DBLoader):
     """
 
     def __init__(self,
-                 max_input_length: int = 5,
+                 max_input_length: int = 10,
                  max_input_text_length: int = 100,
-                 max_output_length: int = 20,
+                 max_output_length: int = 50,
                  database_path: str = "./data.db",
                  table: str = "patterns"
                  ):

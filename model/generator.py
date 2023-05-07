@@ -5,6 +5,7 @@ Contains the generator model
 import typing
 from keras.layers import LSTM, Concatenate, Dense, Layer
 from keras.models import Model
+import tensorflow as tf
 
 
 class Hidden(Layer):
@@ -48,12 +49,12 @@ class RegexGenerator(Model):
     """Model that generates regular expressions
 
     Args:
-        max_output_len (int, optional): Maximum output pattern length. Defaults to 20.
+        max_output_len (int, optional): Maximum output pattern length. Defaults to 50.
 
         name (str, optional): Name of the model. Defaults to "regex_generator".
     """
 
-    def __init__(self, max_output_len=20, name="regex_generator", *args, **kwargs):
+    def __init__(self, max_output_len=50, name="regex_generator", *args, **kwargs):
         super(RegexGenerator, self).__init__(name=name, *args, **kwargs)
         self.max_output_len = max_output_len
         self.matches = Hidden(name="matches")
