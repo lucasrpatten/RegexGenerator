@@ -70,7 +70,8 @@ Though this project was created for personal education, regex reverse engineerin
 - ~~Create Model (completed)~~
 - Obtain Larger Dataset (Important)
 - ~~Convert to functional api, not model subclassing (completed)~~
-- Create Frontend Website
+- Create Frontend Website (In Progress)
+- Create Backend API (In Progress)
 - Create Backend Server (Funding or Host Required)
 
 ## Future Plans/Ideas

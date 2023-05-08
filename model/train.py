@@ -12,7 +12,7 @@ def train():
     """
     process = Preprocessing(database_path="./model/data.db")
     encoded_matches, encoded_rejections, encoded_outputs = process.preprocess_database()
-    epochs, batch_size = 20, 8
+    epochs, batch_size = 20, 32
     model = RegexGenerator()
     model.compile(optimizer="adam", loss="mse")
     model.fit([encoded_matches, encoded_rejections],
@@ -24,11 +24,11 @@ def train():
     _ = r"[a-zA-Z]+\d{2}"
     matches = list(('abAB12', 'cdCD34', 'efEF56', 'ghGH78'))
     rejections = list(('abc', 'def', 'ghi', 'jkl'))
-    matches = process.encode_texts(matches, 100, 5)
-    rejections = process.encode_texts(rejections, 100, 5)
+    matches = process.encode_texts(matches, 100, 10)
+    rejections = process.encode_texts(rejections, 100, 10)
 
-    matches = matches.reshape((1, 5, 100))
-    rejections = rejections.reshape((1, 5, 100))
+    matches = matches.reshape((1, 10, 100))
+    rejections = rejections.reshape((1, 10, 100))
 
     response = model([matches, rejections])
     print(response)

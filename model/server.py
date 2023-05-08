@@ -21,7 +21,7 @@ rejections = p.encode_texts(rejections, 100, 10)
 
 matches = matches.reshape((1, 10, 100))
 
-#FIXME: this is so convoluted, I want to load it normally
+#FIXME: this is so convoluted, fix it to load like normal
 model.compile(optimizer="adam", loss="mse")
 rejections = rejections.reshape((1, 10, 100))
 model.fit([matches, rejections], np.array([0.]))
