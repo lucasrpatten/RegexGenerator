@@ -4,7 +4,7 @@ Contains the generator model
 
 import re
 import typing
-from keras.layers import LSTM, Dense, Layer, MultiHeadAttention, Masking, Bidirectional, Embedding
+from keras.layers import LSTM, Dense, Layer, MultiHeadAttention, Masking, Bidirectional, Embedding, Dropout
 from keras.models import Model
 import tensorflow as tf
 import keras.backend as K
@@ -32,6 +32,7 @@ class FeatureExtraction(Layer):
             **kwargs):
         super().__init__(trainable, name, dtype, dynamic, **kwargs)
         self.masking_layer = Masking(mask_value=0.)
+        self.dropout = Dropout(rate=.3)
         self.hidden1 = Bidirectional(LSTM(512, return_sequences=True))
         self.hidden2 = Bidirectional(LSTM(256, return_sequences=True))
         self.hidden3 = Bidirectional(LSTM(128))
@@ -39,8 +40,11 @@ class FeatureExtraction(Layer):
     def call(self, inputs):
         # x = tf.transpose(inputs, perm=[0, 2, 1])
         masked_inputs = self.masking_layer(inputs)
-        hidden = self.hidden1(masked_inputs)
+        hidden = self.dropout(masked_inputs)
+        hidden = self.hidden1(hidden)
+        hidden = self.dropout(hidden)
         hidden = self.hidden2(hidden)
+        hidden = self.dropout(hidden)
         hidden = self.hidden3(hidden)
         return hidden
 
@@ -63,9 +67,11 @@ class RegexGenerator(Model):
         # Practical and computationally friendly to use one encoder
         self.attention = MultiHeadAttention(
             num_heads=2, key_dim=12, attention_axes=1)
-        self.dense = Dense(512, activation="relu")
-        self.dense1 = Dense(256, activation="relu")
+        self.dense = Dense(1024, activation="relu")
+        self.dense1 = Dense(512, activation="relu")
+        self.dense2 = Dense(256, activation="relu")
         self.output_layer = Dense(max_output_len, activation="tanh")
+        self.dropout = Dropout(rate=.3)
 
     def get_config(self):
         return {
@@ -78,11 +84,14 @@ class RegexGenerator(Model):
 
     def call(self, inputs, training=None, mask=None):
         matches, rejections = inputs
-        match_embed = self.embedding(matches)
-        matches = self.features(match_embed)
+        matches = self.features(matches)
         rejections = self.features(rejections)
         attention = self.attention(matches, rejections)
-        hidden = self.dense(attention)
+        hidden = self.dropout(attention)
+        hidden = self.dense(hidden)
+        hidden = self.dropout(hidden)
         hidden = self.dense1(hidden)
+        hidden = self.dropout(hidden)
+        hidden = self.dense2(hidden)
         out = self.output_layer(hidden)
         return out
