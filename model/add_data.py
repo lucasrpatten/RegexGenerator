@@ -25,11 +25,3 @@ class DatabaseManager(Database):
                     f"'{i}' should not match pattern '{output_pattern}'")
 
         self.add_row(accepted_texts, rejected_texts, output_pattern)
-
-
-
-
-
-d = DatabaseManager("./model/data.db", "patterns")
-for i in b:
-    d.addData(i["matches"], i["rejections"], i["pattern"])

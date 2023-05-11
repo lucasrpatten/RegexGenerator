@@ -80,6 +80,7 @@ How can **you** contribute to this project? There's always something that we nee
   - ~~Mean Squared Difference Loss (Complete)~~
   - "Is Regex Valid" Loss
   - "Does Regex Match Inputs" Loss
+- Add Integer Embedding Layer
 - Create Frontend Website (In Progress)
 - Create Backend API (In Progress)
 - Create Backend Server (Funding or Host Required)

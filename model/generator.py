@@ -56,7 +56,7 @@ class RegexGenerator(Model):
 
     def __init__(self, max_output_len=50, name="regex_generator", *args, **kwargs):
         super(RegexGenerator, self).__init__(name=name, *args, **kwargs)
-        self.max_output_len = max_output_len\
+        self.max_output_len = max_output_len
         # TODO: Test if using seperate encoders or one encoder is more effective
         self.features = FeatureExtraction(name="feature_extraction_encoder")
         # I hypothesise that it is more effective to use two seperate encoders, but much more
@@ -78,7 +78,8 @@ class RegexGenerator(Model):
 
     def call(self, inputs, training=None, mask=None):
         matches, rejections = inputs
-        matches = self.features(matches)
+        match_embed = self.embedding(matches)
+        matches = self.features(match_embed)
         rejections = self.features(rejections)
         attention = self.attention(matches, rejections)
         hidden = self.dense(attention)
