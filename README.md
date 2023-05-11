@@ -77,7 +77,7 @@ How can **you** contribute to this project? There's always something that we nee
 - ~~Create Model (completed)~~
 - Obtain Larger Dataset (Important)
 - Write Custom Loss Function with a combination of
-  - Absolute Difference Loss
+  - ~~Mean Squared Difference Loss (Complete)~~
   - "Is Regex Valid" Loss
   - "Does Regex Match Inputs" Loss
 - Create Frontend Website (In Progress)

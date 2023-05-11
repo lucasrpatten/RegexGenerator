@@ -5,16 +5,23 @@
 import json
 from generator import RegexGenerator
 from preprocessing import Preprocessing
+import tensorflow as tf
 
+def custom_loss(y_true, y_pred):
+    int_true = tf.multiply(128.0, y_true)
+    int_pred = tf.multiply(128.0, y_pred)
+    squared_difference = tf.square(int_true - int_pred)
+    return tf.reduce_mean(squared_difference, axis=-1)
 
 def train():
     """ Function to train the model from the dataset
     """
     process = Preprocessing(database_path="./model/data.db")
     encoded_matches, encoded_rejections, encoded_outputs = process.preprocess_database()
-    epochs, batch_size = 20, 32
+    epochs, batch_size = 128, 16
     model = RegexGenerator()
-    model.compile(optimizer="adam", loss="mse")
+
+    model.compile(optimizer="adam", loss=custom_loss)
     model.fit([encoded_matches, encoded_rejections],
               encoded_outputs, batch_size, epochs)
     model.save_weights("model.h5")

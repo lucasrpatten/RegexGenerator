@@ -4,9 +4,8 @@ Contains the generator model
 
 import re
 import typing
-from keras.layers import LSTM, Concatenate, Dense, Layer, MultiHeadAttention, Masking, Bidirectional
+from keras.layers import LSTM, Dense, Layer, MultiHeadAttention, Masking, Bidirectional, Embedding
 from keras.models import Model
-from keras.losses import mean_squared_error
 import tensorflow as tf
 import keras.backend as K
 
@@ -57,13 +56,13 @@ class RegexGenerator(Model):
 
     def __init__(self, max_output_len=50, name="regex_generator", *args, **kwargs):
         super(RegexGenerator, self).__init__(name=name, *args, **kwargs)
-        self.max_output_len = max_output_len
+        self.max_output_len = max_output_len\
         # TODO: Test if using seperate encoders or one encoder is more effective
         self.features = FeatureExtraction(name="feature_extraction_encoder")
         # I hypothesise that it is more effective to use two seperate encoders, but much more
         # Practical and computationally friendly to use one encoder
         self.attention = MultiHeadAttention(
-            num_heads=2, key_dim=2, attention_axes=1)
+            num_heads=2, key_dim=12, attention_axes=1)
         self.dense = Dense(512, activation="relu")
         self.dense1 = Dense(256, activation="relu")
         self.output_layer = Dense(max_output_len, activation="tanh")
