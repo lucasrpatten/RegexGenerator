@@ -18,7 +18,7 @@ def train():
     """
     process = Preprocessing(database_path="./model/data.db")
     encoded_matches, encoded_rejections, encoded_outputs = process.preprocess_database()
-    epochs, batch_size = 128, 16
+    epochs, batch_size = 32, 128
     model = RegexGenerator()
 
     model.compile(optimizer="adam", loss=custom_loss)

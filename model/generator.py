@@ -4,7 +4,7 @@ Contains the generator model
 
 import re
 import typing
-from keras.layers import LSTM, Dense, Layer, MultiHeadAttention, Masking, Bidirectional, Embedding, Dropout
+from keras.layers import LSTM, Dense, Layer, MultiHeadAttention, Masking, Bidirectional, Embedding, Dropout, Add
 from keras.models import Model
 import tensorflow as tf
 import keras.backend as K
@@ -48,7 +48,6 @@ class FeatureExtraction(Layer):
         hidden = self.hidden3(hidden)
         return hidden
 
-
 class RegexGenerator(Model):
     """Model that generates regular expressions
 
@@ -65,13 +64,16 @@ class RegexGenerator(Model):
         self.features = FeatureExtraction(name="feature_extraction_encoder")
         # I hypothesise that it is more effective to use two seperate encoders, but much more
         # Practical and computationally friendly to use one encoder
-        self.attention = MultiHeadAttention(
-            num_heads=2, key_dim=12, attention_axes=1)
-        self.dense = Dense(1024, activation="relu")
-        self.dense1 = Dense(512, activation="relu")
-        self.dense2 = Dense(256, activation="relu")
+        self.attention_diff = MultiHeadAttention(
+            num_heads=2, key_dim=64, attention_axes=1)
+        self.attention_comb = MultiHeadAttention(
+            num_heads=2, key_dim=64, attention_axes=(1, 2)
+        )
+        self.dense = Dense(512, activation="relu")
+        self.dense1 = Dense(256, activation="relu")
         self.output_layer = Dense(max_output_len, activation="tanh")
-        self.dropout = Dropout(rate=.3)
+        self.dropout = Dropout(rate=.5)
+        self.add_layer = Add()
 
     def get_config(self):
         return {
@@ -84,14 +86,14 @@ class RegexGenerator(Model):
 
     def call(self, inputs, training=None, mask=None):
         matches, rejections = inputs
+        matches = self.attention_comb(matches, matches)
         matches = self.features(matches)
+        rejections = self.attention_comb(rejections, rejections)
         rejections = self.features(rejections)
-        attention = self.attention(matches, rejections)
+        attention = self.attention_diff(matches, rejections)
         hidden = self.dropout(attention)
         hidden = self.dense(hidden)
         hidden = self.dropout(hidden)
         hidden = self.dense1(hidden)
-        hidden = self.dropout(hidden)
-        hidden = self.dense2(hidden)
         out = self.output_layer(hidden)
         return out
